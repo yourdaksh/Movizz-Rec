@@ -988,7 +988,7 @@ if 'show_advanced_filters' not in st.session_state:
 def load_data():
     try:
         # Load movie data
-        with open("movie_dict.pickle","rb") as file:
+        with open("movie_dict.pickle", "rb") as file:
             movies_dict = pickle.load(file)
             movies_df = pd.DataFrame(movies_dict)
 
@@ -1012,6 +1012,7 @@ def load_data():
         st.error(f"Error loading data: {str(e)}")
         return pd.DataFrame(), np.array([]), []
 
+# Load the data
 movies, similarity, all_genres = load_data()
 
 # Update the sidebar section
@@ -1619,74 +1620,39 @@ else:
                 cols = st.columns(5)
                 for idx, (movie, details) in enumerate(zip(recommended_movies, movie_details)):
                     with cols[idx % 5]:
-                        with st.container():
-                            st.markdown("""
+                        # Movie poster
+                        if details['poster_path']:
+                            st.image(details['poster_path'], use_container_width=True)
+                        
+                        # Movie info
+                        st.markdown(f"""
                             <div class="movie-card">
-                                <div class="movie-poster">
-                            """, unsafe_allow_html=True)
-                            
-                            if details['poster_path']:
-                                st.image(details['poster_path'], use_container_width=True)
-                            
-                            st.markdown(f"""
-                                </div>
                                 <div class="movie-info">
                                     <div class="movie-title">{movie}</div>
-                                    <div style="text-align: center">
-                                        <span class="rating-badge">⭐ {details['rating']}</span>
+                                    <div class="movie-meta">
+                                        <span class="rating">⭐ {details['rating']}</span>
+                                        <span class="year">({details['year']})</span>
                                     </div>
                                 </div>
                             </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Show movie details in expander
-                            with st.expander("Show Details 🎬"):
-                                st.markdown(f"""
-                                <div class='movie-details'>
-                                    <div class='rating-section'>
-                                        <span class='rating-badge'>⭐ {details['rating']}</span>
-                                        <span class='vote-count'>({details['vote_count']} votes)</span>
-                                    </div>
-                                    <div class='movie-meta'>
-                                        🎬 {details['year']} | ⏱️ {details.get('runtime', 'N/A')} min | 🌍 {details['language']}
-                                    </div>
-                                    <div class='movie-info'>
-                                        <p><strong>Overview:</strong><br>{details['overview']}</p>
-                                        <p><strong>Genres:</strong><br>{", ".join(details['genres'])}</p>
-                                        <p><strong>Director:</strong><br>{details['director']}</p>
-                                        <p><strong>Cast:</strong><br>{", ".join(details['cast'])}</p>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                
-                                # Trailer
-                                movie_id = movies[movies['title'] == movie]['id'].iloc[0]
-                                if trailer_url := get_movie_trailer(movie_id):
-                                    st.video(trailer_url)
-                                
-                                # User interactions
-                                rating = st.select_slider(
-                                    "Rate this movie",
-                                    options=[1, 2, 3, 4, 5],
-                                    value=st.session_state.user_ratings.get(movie, 3),
-                                    key=f"rating_{movie}"
-                                )
-                                
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    if st.button("Save Rating", key=f"save_{movie}"):
-                                        st.session_state.user_ratings[movie] = rating
-                                        st.success("Rating saved!")
-                                
-                                with col2:
-                                    if movie in st.session_state.watchlist:
-                                        if st.button("❌ Remove", key=f"watchlist_{movie}"):
-                                            st.session_state.watchlist.remove(movie)
-                                            st.success("Removed!")
-                                    else:
-                                        if st.button("➕ Watchlist", key=f"watchlist_{movie}"):
-                                            st.session_state.watchlist.add(movie)
-                                            st.success("Added!")
+                        """, unsafe_allow_html=True)
+                        
+                        # User interactions
+                        rating_col1, rating_col2 = st.columns(2)
+                        with rating_col1:
+                            if st.button("Save Rating", key=f"save_{movie}"):
+                                st.session_state.user_ratings[movie] = rating
+                                st.success("Rating saved!")
+                        
+                        with rating_col2:
+                            if movie in st.session_state.watchlist:
+                                if st.button("❌ Remove", key=f"watchlist_{movie}"):
+                                    st.session_state.watchlist.remove(movie)
+                                    st.success("Removed!")
+                            else:
+                                if st.button("➕ Watchlist", key=f"watchlist_{movie}"):
+                                    st.session_state.watchlist.add(movie)
+                                    st.success("Added!")
 
 # Display watchlist
 if st.session_state.watchlist:
@@ -1924,85 +1890,81 @@ def get_mood_based_movies(mood_settings, filtered_movies, limit=10):
 with st.expander("🎭 Mood-Based Discovery", expanded=False):
     # Use a container for full width
     with st.container():
-        # Header section with gradient background
         st.markdown("""
             <div class='mood-section'>
-                <h2>Find Movies Based on Your Mood</h2>
-                <p>Let us suggest movies that match how you're feeling right now!</p>
+                <h3>Find Movies Based on Your Mood</h3>
+                <p>Let us suggest some great movies that match how you're feeling!</p>
             </div>
         """, unsafe_allow_html=True)
         
-        # Mood selector section
-        st.markdown("""
-            <div class='mood-selector-section'>
-                <h3>How are you feeling today?</h3>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Create two columns for mood selection
-        col1, col2 = st.columns([3, 2])
+        # Mood selector in a wider layout
+        col1, col2, col3 = st.columns([3, 2, 1])
         
         with col1:
             selected_mood = st.select_slider(
-                "",  # Remove label since we have it in the header
+                "How are you feeling today?",
                 options=list(MOODS.keys()),
                 value=list(MOODS.keys())[0]
             )
-            
-            # Show mood description below slider
-            st.markdown(f"""
-                <div class='mood-description'>
-                    <p>{MOODS[selected_mood]["description"]}</p>
-                    <div class='mood-genres'>
-                        Suggested genres: {', '.join(MOODS[selected_mood]["genres"])}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
         
         with col2:
-            st.write("")  # Add some spacing
-            st.write("")
-            if st.button("Find Movies ✨", use_container_width=True, type="primary"):
+            st.markdown(f"### {selected_mood}")
+            st.write(MOODS[selected_mood]["description"])
+        
+    with col3:
+            st.write("")  # Spacing
+            if st.button("Find Movies ✨", use_container_width=True):
                 with st.spinner('Finding the perfect movies for your mood...'):
-                    # Get recommendations using cached function
-                    filtered_movies = movies[
-                        movies['genres'].apply(lambda x: any(genre in x for genre in MOODS[selected_mood]["genres"]))
-                    ]
-                    recommendations = get_mood_based_movies(MOODS[selected_mood], filtered_movies)
+                    # Get the mood settings
+                    mood_settings = MOODS[selected_mood]
                     
-                    if recommendations:
-                        # Results section
-                        st.markdown("""
-                        <div class='recommendations-header'>
-                            <h3>🎬 Your Mood-Based Recommendations</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Display movies in a grid
-                        movie_cols = st.columns(3)  # Reduce to 3 columns for bigger cards
-                        for idx, (movie, details) in enumerate(recommendations):
-                            with movie_cols[idx % 3]:
-                                # Movie card
-                                st.markdown(f"""
-                                <div class="mood-movie-card">
-                                    <div class="movie-poster">
-                                        <img src="{details['poster_path']}" alt="{movie}">
-                                    </div>
-                                    <div class="movie-content">
-                                        <h4>{movie}</h4>
-                                        <div class="movie-meta">
-                                            <span class="rating">⭐ {details['rating']}</span>
-                                            <span class="year">{details['year']}</span>
-                                        </div>
-                                        <div class="movie-details">
-                                            <p class="director">🎬 {details['director']}</p>
-                                            <p class="cast">👥 {', '.join(details['cast'][:2])}</p>
-                                            <p class="genres">{', '.join(details['genres'][:3])}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
+                    # Filter movies by genre first
+                    filtered_movies = movies[
+                        movies['genres'].apply(lambda x: any(genre in x for genre in mood_settings['genres']))
+                    ]
+                    
+                    if filtered_movies.empty:
+                        st.warning("No movies found matching your mood. Try another mood!")
                     else:
-                        st.warning("No movies found matching your mood criteria. Try adjusting the mood!")
+                        # Get recommendations using cached function
+                        recommendations = get_mood_based_movies(mood_settings, filtered_movies)
+                        
+                        if recommendations:
+                            st.success(f"Found {len(recommendations)} movies perfect for your {selected_mood} mood!")
+                            
+                            # Use full width for recommendations
+                            st.markdown("""
+                            <div class='recommendations-section'>
+                                <h3>🎬 Your Mood-Based Recommendations</h3>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Display recommendations in a wider grid
+                            cols = st.columns(6)  # Increased to 6 columns
+                            for idx, (movie, details) in enumerate(recommendations):
+                                with cols[idx % 6]:
+                                    # Movie poster
+                                    if details['poster_path']:
+                                        st.image(details['poster_path'], use_container_width=True)
+                                    
+                                    # Movie info in a compact card
+                                    st.markdown(f"""
+                                    <div class="movie-card mood-card">
+                                        <div class="movie-info">
+                                            <div class="movie-title">{movie}</div>
+                                            <div class="movie-meta">
+                                                <span class="rating">⭐ {details['rating']}</span>
+                                                <span class="year">({details['year']})</span>
+                                            </div>
+                                            <div class="movie-details">
+                                                <div class="director">🎬 {details['director']}</div>
+                                                <div class="cast">👥 {', '.join(details['cast'][:2])}</div>
+                                                <div class="genres">📝 {', '.join(details['genres'][:3])}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                        else:
+                            st.warning("No movies found matching your mood criteria. Try adjusting the mood!")
 
     
