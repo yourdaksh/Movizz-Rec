@@ -1459,7 +1459,7 @@ else:
                 # Create 4 columns
                 cols = st.columns(4)
                 for idx, (movie, details) in enumerate(zip(recommended_movies, movie_details)):
-                    with cols[idx % 4]:  # Changed to 4 columns
+                    with cols[idx % 4]:
                         # Movie poster
                         if details['poster_path']:
                             st.image(details['poster_path'], use_container_width=True)
@@ -1477,8 +1477,30 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Show movie details in expander
-                        show_movie_details(movie, details, "main_")
+                        # Use expander instead of button
+                        with st.expander("View Details", expanded=False):
+                            st.markdown(f"### {movie}")
+                            st.write(f"**Overview:** {details['overview']}")
+                            st.write(f"**Director:** {details['director']}")
+                            st.write(f"**Cast:** {', '.join(details['cast'][:3])}")
+                            st.write(f"**Genres:** {', '.join(details['genres'])}")
+                            
+                            # Show trailer
+                            movie_id = movies[movies['title'] == movie]['id'].iloc[0]
+                            if trailer_url := get_movie_trailer(movie_id):
+                                st.video(trailer_url)
+                            else:
+                                st.info("No trailer available")
+                            
+                            # Watchlist button
+                            if movie in st.session_state.watchlist:
+                                if st.button("Remove from Watchlist", key=f"main_remove_{idx}_{movie}"):
+                                    st.session_state.watchlist.remove(movie)
+                                    st.success("Removed from watchlist!")
+                            else:
+                                if st.button("Add to Watchlist", key=f"main_add_{idx}_{movie}"):
+                                    st.session_state.watchlist.add(movie)
+                                    st.success("Added to watchlist!")
 
 # Display watchlist
 if st.session_state.watchlist:
@@ -1629,11 +1651,10 @@ if st.session_state.expanded_movie:
 # Update the mood-based discovery section
 with st.expander("Mood-Based Discovery", expanded=False):
     st.markdown("""
-        <div class="full-width-container">
-            <div class="mood-section">
-                <h3>Find Movies Based on Your Mood</h3>
-                <p>Let us suggest some great movies that match how you're feeling!</p>
-            </div>
+        <div class="mood-section">
+            <h3>Find Movies Based on Your Mood</h3>
+            <p>Let us suggest some great movies that match how you're feeling!</p>
+        </div>
     """, unsafe_allow_html=True)
     
     # Mood selector in two columns
@@ -1671,9 +1692,9 @@ with st.expander("Mood-Based Discovery", expanded=False):
                     st.success(f"Found {len(recommendations)} movies perfect for your {selected_mood} mood!")
                     
                     # Full width container for movies with 4 columns
-                    cols = st.columns(4)  # Changed to 4 columns
+                    cols = st.columns(4)
                     for idx, (movie, details) in enumerate(recommendations):
-                        with cols[idx % 4]:  # Changed to 4 columns
+                        with cols[idx % 4]:
                             if details['poster_path']:
                                 st.image(details['poster_path'], use_container_width=True)
                             
@@ -1689,8 +1710,31 @@ with st.expander("Mood-Based Discovery", expanded=False):
                                 </div>
                             """, unsafe_allow_html=True)
                             
-                            # Show movie details in expander
-                            show_movie_details(movie, details, f"mood_{idx}")
+                            # Use button to show/hide details
+                            if st.button("View Details", key=f"mood_view_{idx}_{movie}"):
+                                st.markdown("---")
+                                st.markdown(f"### {movie}")
+                                st.write(f"**Overview:** {details['overview']}")
+                                st.write(f"**Director:** {details['director']}")
+                                st.write(f"**Cast:** {', '.join(details['cast'][:3])}")
+                                st.write(f"**Genres:** {', '.join(details['genres'])}")
+                                
+                                # Show trailer
+                                movie_id = movies[movies['title'] == movie]['id'].iloc[0]
+                                if trailer_url := get_movie_trailer(movie_id):
+                                    st.video(trailer_url)
+                                else:
+                                    st.info("No trailer available")
+                                
+                                # Watchlist button
+                                if movie in st.session_state.watchlist:
+                                    if st.button("Remove from Watchlist", key=f"mood_remove_{idx}_{movie}"):
+                                        st.session_state.watchlist.remove(movie)
+                                        st.success("Removed from watchlist!")
+                                else:
+                                    if st.button("Add to Watchlist", key=f"mood_add_{idx}_{movie}"):
+                                        st.session_state.watchlist.add(movie)
+                                        st.success("Added to watchlist!")
                 else:
                     st.warning("No movies found matching your mood criteria. Try adjusting the mood!")
     
