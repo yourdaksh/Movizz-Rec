@@ -224,7 +224,7 @@ st.markdown(
 
     /* Search bar */
     .search-container {
-        background: white;
+        background: blue;
         padding: 1rem;
         border-radius: 15px;
         box-shadow: var(--card-shadow);
@@ -1462,7 +1462,7 @@ else:
                     with cols[idx % 4]:
                         # Movie poster
                         if details['poster_path']:
-                            st.image(details['poster_path'], use_container_width=True)
+                            st.image(details['poster_path']) 
                         
                         # Movie info
                         st.markdown(f"""
@@ -1578,7 +1578,7 @@ def show_movie_detail_page(movie, details):
     
     with poster_col:
         if details['poster_path']:
-            st.image(details['poster_path'], use_container_width=True)
+            st.image(details['poster_path'])  
 
 # Add this function
 def reset_view():
@@ -1696,7 +1696,7 @@ with st.expander("Mood-Based Discovery", expanded=False):
                     for idx, (movie, details) in enumerate(recommendations):
                         with cols[idx % 4]:
                             if details['poster_path']:
-                                st.image(details['poster_path'], use_container_width=True)
+                                st.image(details['poster_path'])
                             
                             st.markdown(f"""
                                 <div class="movie-card">
